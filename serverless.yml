@@ -1,0 +1,42 @@
+service:
+  name: email-sending-service
+
+plugins:
+  - serverless-bundle
+  - serverless-pseudo-parameters
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  memorySize: 256
+  stage: ${opt:stage, 'dev'}
+  lambdaHashingVersion: 20201221
+  region: ap-southeast-2
+  iamRoleStatements:
+    - ${file(iam/mail-queue.yml):MailQueueIAM}
+    - ${file(iam/mail-ses.yml):MailSESIAM}
+
+resources:
+  Resources: 
+    MailQueue: ${file(resources/mail-queue.yml):MailQueue}
+  Outputs:
+    MailQueueArn: ${file(resources/mail-queue.yml):Outputs.MailQueueArn}
+    MailQueueUrl: ${file(resources/mail-queue.yml):Outputs.MailQueueUrl}
+
+functions:
+  healthcheck:
+    handler: src/handlers/healthcheck.handler
+  sendMail:
+    handler: src/handlers/sendMail.handler
+    events:
+      - sqs:
+          arn: ${self:custom.MailQueue.arn}
+          batchSize: 1
+
+custom:
+  MailQueue: 
+    name: MailQueue-${self:provider.stage}
+    arn: !GetAtt MailQueue.Arn
+    url: !Ref MailQueue
+  bundle:
+    linting: 'false'

@@ -1,0 +1,5 @@
+MailSESIAM:
+  Effect: Allow
+  Action:
+    - ses:*
+  Resource: arn:aws:ses:*
